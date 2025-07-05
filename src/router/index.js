@@ -1,29 +1,62 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Login from '../views/Login.vue'
-import AdminPage from '../views/AdminPage.vue'
-import UserPage from '../views/UserPage.vue'
-import Register from '../views/Register.vue'
+import AdminLayout from '../components/AdminLayout.vue'
+import UserLayout from '../components/UserLayout.vue'
+import DefaultLayout from "../views/DefaultLayout.vue";
 
 const routes = [
-  { path: '/', name: 'Login', component: Login },
-  // { path: '/admin/dashboard', component: AdminPage },
-  { path: '/user/dashboard', component: UserPage },
-  { path: '/register', component: Register },
+  // Layout default (Login & Register)
+  {
+    path: '/',
+    component: DefaultLayout,
+    children: [
+      {
+        path: '',
+        name: 'Login',
+        component: () => import('../views/login.vue')
+      },
+      {
+        path: 'register',
+        name: 'Register',
+        component: () => import('../views/register.vue')
+      }
+    ]
+  },
+
+  // Layout untuk Admin
   {
     path: '/admin',
-    component: () => import('@/views/admin/AdminLayout.vue'),
+    component: AdminLayout,
     children: [
       {
         path: 'dashboard',
         name: 'AdminDashboard',
-        component: () => import('@/views/admin/Dashboard.vue')
+        component: () => import('../views/admin/Dashboard.vue')
       },
       {
         path: 'users',
         name: 'AdminUsers',
-        component: () => import('@/views/admin/Users.vue')
+        component: () => import('../views/admin/Users.vue')
       }
     ]
+  },
+
+  // Layout untuk User
+  {
+    path: '/user',
+    component: UserLayout,
+    children: [
+      {
+        path: 'profile',
+        name: 'UserProfile',
+        component: () => import('../views/UserPage.vue')
+      }
+    ]
+  },
+
+  // Redirect jika route tidak ditemukan
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 

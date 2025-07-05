@@ -36,6 +36,9 @@
         >
           Login
         </button>
+        <p v-if="errors.general" class="text-red-500 text-sm mt-4 text-center">
+          {{ errors.general }}
+        </p>
         <div class="text-center mt-4">
           <p class="text-sm text-gray-600">
             Belum punya akun?
@@ -48,67 +51,65 @@
 </template>
 
 <script>
-
-const staticUsers = [
-  {
-    email: 'admin@example.com',
-    password: 'asdf',
-    name: 'Admin User',
-    role: 'admin',
-    permissions: ['create_user', 'delete_user', 'edit_role', 'manage_permission']
-  },
-  {
-    email: 'user@example.com',
-    password: 'asdf',
-    name: 'Normal User',
-    role: 'user',
-    permissions: ['view_profile']
-  }
-]
-
 export default {
-  name: 'Login',
   data() {
     return {
       email: '',
       password: '',
       errors: {},
-      // Data statis sementara
-      // users: [
-      //   { email: 'admin@mail.com', password: 'admin123', role: 'admin' },
-      //   { email: 'user@mail.com', password: 'user123', role: 'user' }
-      // ]
+      // 🔒 Data user sementara
+      staticUsers: [
+        {
+          email: 'admin@example.com',
+          password: 'admin123',
+          name: 'Admin User',
+          role: 'admin',
+          permissions: ['manage_users', 'view_dashboard']
+        },
+        {
+          email: 'user@example.com',
+          password: 'user123',
+          name: 'Normal User',
+          role: 'user',
+          permissions: ['view_profile']
+        }
+      ]
     }
   },
   methods: {
     login() {
       this.errors = {}
 
-      // Validasi input
-      if (!this.email) this.errors.email = 'Email is required'
-      else if (!this.validEmail(this.email)) this.errors.email = 'Email is invalid'
-
-      if (!this.password) this.errors.password = 'Password is required'
-      else if (this.password.length < 4) this.errors.password = 'Password must be at least 4 characters'
-
-      if (Object.keys(this.errors).length === 0) {
-        const user = staticUsers.find(u => u.email === this.email && u.password === this.password)
-
-        if (user) {
-          localStorage.setItem('authUser', JSON.stringify(user))
-          if (user.role === 'admin') {
-            this.$router.push('/admin/dashboard')
-          } else {
-            this.$router.push('/user/dashboard')
-          }
-        } else {
-          this.errors.email = 'Email or password is incorrect'
-        }
+      if (!this.email) {
+        this.errors.email = 'Email is required'
       }
-    },
-    validEmail(email) {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      return re.test(email)
+
+      if (!this.password) {
+        this.errors.password = 'Password is required'
+      }
+
+      if (Object.keys(this.errors).length > 0) return
+
+      // ✅ Cek user statis
+      const foundUser = this.staticUsers.find(
+          (user) => user.email === this.email && user.password === this.password
+      )
+
+      if (!foundUser) {
+        this.errors.general = 'Email or password is incorrect'
+        return
+      }
+
+      // ✅ Simpan user ke localStorage (nanti bisa diganti dengan token)
+      localStorage.setItem('user', JSON.stringify(foundUser))
+      console.log('Logged in as:', foundUser) // pastikan user.role benar
+
+      // ✅ Redirect berdasarkan role
+      if (foundUser.role === 'admin') {
+        this.$router.push('/admin/dashboard')
+      } else if (foundUser.role === 'user') {
+        this.$router.push('/user/profile')
+      }
     }
   }
 }

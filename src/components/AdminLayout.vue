@@ -7,11 +7,12 @@
     <div class="flex-1 p-6">
       <router-view />
     </div>
+
   </div>
 </template>
 
 <script>
-import AdminSidebar from '@/components/AdminSidebar.vue'
+import AdminSidebar from '../components/AdminSidebar.vue'
 
 export default {
   name: 'AdminLayout',
@@ -22,6 +23,12 @@ export default {
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || user.role !== 'admin') {
       this.$router.push('/') // redirect ke login jika bukan admin
+    }
+  },
+  methods: {
+    logout() {
+      localStorage.removeItem('user')
+      this.$router.push('/login')
     }
   }
 }
