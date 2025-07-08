@@ -1,70 +1,233 @@
 <template>
-  <div class="p-6">
-    <h2 class="text-2xl font-bold mb-4">User Management</h2>
+  <div class="p-4">
+    <h2 class="text-xl font-bold mb-4">User Management</h2>
 
-    <input v-model="search" placeholder="Search user..." class="mb-4 p-2 border rounded w-full" />
+    <!-- Search -->
+    <input
+        type="text"
+        v-model="search"
+        placeholder="Search user..."
+        class="border px-2 py-1 mb-4 w-full max-w-xs rounded"
+    />
 
-    <table class="w-full border">
-      <thead>
-      <tr class="bg-gray-100">
+    <!-- Tambah User Button -->
+    <button
+        @click="openAddModal"
+        class="mb-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+    >
+      + Tambah User
+    </button>
+
+    <!-- Tabel User -->
+    <table class="table-auto w-full border-collapse border">
+      <thead class="bg-gray-100">
+      <tr>
         <th class="border px-4 py-2">#</th>
         <th class="border px-4 py-2">Nama</th>
         <th class="border px-4 py-2">Email</th>
         <th class="border px-4 py-2">Role</th>
+        <th class="border px-4 py-2">Aksi</th>
       </tr>
       </thead>
       <tbody>
-      <tr v-for="(user, index) in users" :key="user.id">
+      <tr v-for="(user, index) in filteredUsers" :key="user.id">
         <td class="border px-4 py-2">{{ index + 1 }}</td>
         <td class="border px-4 py-2">{{ user.name }}</td>
         <td class="border px-4 py-2">{{ user.email }}</td>
-        <td class="border px-4 py-2">{{ user.role.name }}</td>
-        <td class="p-2 border">
-          <button class="text-blue-500" @click="editUser(user)">Edit</button> |
-          <button class="text-red-500" @click="deleteUser(user.email)">Delete</button>
+        <td class="border px-4 py-2">{{ user.role?.name_role }}</td>
+        <td class="border px-4 py-2 space-x-2">
+          <button @click="openEditModal(user)" class="text-blue-500 hover:underline">Edit</button>
+          <button @click="openDeleteModal(user.id)" class="text-red-500 hover:underline">Delete</button>
         </td>
       </tr>
       </tbody>
     </table>
+
+    <!-- Modal Edit -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <h3 class="text-lg font-semibold mb-4">Edit User</h3>
+        <input v-model="selectedUser.name" placeholder="Nama" class="border px-3 py-2 mb-3 w-full rounded" />
+        <input v-model="selectedUser.email" placeholder="Email" class="border px-3 py-2 mb-3 w-full rounded" />
+        <div class="flex justify-end space-x-2">
+          <button @click="updateUser" class="bg-blue-500 text-white px-4 py-2 rounded">Simpan</button>
+          <button @click="closeEditModal" class="bg-gray-300 px-4 py-2 rounded">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Tambah User -->
+    <div
+        v-if="showAddModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <h3 class="text-lg font-semibold mb-4">Tambah User</h3>
+        <input
+            v-model="newUser.name"
+            placeholder="Nama"
+            class="border px-3 py-2 mb-3 w-full rounded"
+        />
+        <input
+            v-model="newUser.email"
+            placeholder="Email"
+            class="border px-3 py-2 mb-3 w-full rounded"
+        />
+        <input
+            v-model="newUser.password"
+            type="password"
+            placeholder="Password"
+            class="border px-3 py-2 mb-3 w-full rounded"
+        />
+        <select
+            v-model.number="newUser.role_id"
+            class="w-full border rounded px-2 py-1 mt-2"
+        >
+          <option disabled value="">Pilih Role</option>
+          <option v-for="role in roles" :key="role.id" :value="role.id">
+            {{ role.name_role }}
+          </option>
+        </select>
+        <div class="flex justify-end space-x-2">
+          <button @click="createUser" class="bg-green-500 text-white px-4 py-2 rounded">Simpan</button>
+          <button @click="closeAddModal" class="bg-gray-300 px-4 py-2 rounded">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Delete -->
+    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg text-center">
+        <p class="text-lg mb-4">Yakin ingin menghapus user ini?</p>
+        <div class="flex justify-center gap-4">
+          <button @click="confirmDeleteUser" class="bg-red-500 text-white px-4 py-2 rounded">Ya</button>
+          <button @click="closeDeleteModal" class="bg-gray-300 px-4 py-2 rounded">Batal</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
-import axios from '@/axios' // jika kamu sudah setup global axios
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import axios from '@/axios'
 
 const users = ref([])
-onMounted(async () => {
-  try {
-    const response = await axios.get('/api/user') // Pastikan route ini sesuai Laravel kamu
-    users.value = response.data
-  } catch (error) {
-    console.error('Gagal mengambil data user:', error)
-  }
-})
+const search = ref('')
+const selectedUser = ref(null)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const userIdToDelete = ref(null)
 
-export default {
-  data() {
-    // return {
-    //   search: '',
-    //   users: [
-    //     { name: 'Admin', email: 'admin@example.com' },
-    //     { name: 'User A', email: 'a@example.com' }
-    //   ]
-    // }
-  },
-  computed: {
-    filteredUsers() {
-      return this.users.filter(u => u.name.toLowerCase().includes(this.search.toLowerCase()))
+onMounted(fetchUsers)
+
+async function fetchUsers() {
+  try {
+    const res = await axios.get('/users')
+    users.value = res.data
+  } catch (err) {
+    console.error('Gagal ambil user:', err)
+  }
+}
+
+const filteredUsers = computed(() =>
+    users.value.filter(user =>
+        user.name.toLowerCase().includes(search.value.toLowerCase()) ||
+        user.email.toLowerCase().includes(search.value.toLowerCase()) ||
+        user.role?.name_role?.toLowerCase().includes(search.value.toLowerCase())
+    )
+)
+
+function openEditModal(user) {
+  selectedUser.value = { ...user }
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  selectedUser.value = null
+}
+
+async function updateUser() {
+  try {
+    await axios.put(`/users/${selectedUser.value.id}`, {
+      name: selectedUser.value.name,
+      email: selectedUser.value.email
+    })
+    fetchUsers()
+    closeEditModal()
+  } catch (err) {
+    console.error('Gagal update:', err)
+  }
+}
+
+function openDeleteModal(id) {
+  userIdToDelete.value = id
+  showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+  userIdToDelete.value = null
+  showDeleteModal.value = false
+}
+
+async function confirmDeleteUser() {
+  try {
+    await axios.delete(`/users/${userIdToDelete.value}`)
+    fetchUsers()
+    closeDeleteModal()
+  } catch (err) {
+    console.error('Gagal hapus:', err)
+  }
+}
+
+const showAddModal = ref(false)
+const newUser = ref({
+  name: '',
+  email: '',
+  password: '',
+  role_id: ''
+})
+const roles = ref([])
+
+function openAddModal() {
+  showAddModal.value = true
+  newUser.value = { name: '', email: '', password: '', role_id: '' }
+  fetchRoles()
+}
+function closeAddModal() {
+  showAddModal.value = false
+}
+
+async function createUser() {
+  try {
+    // validasi sederhana
+    if (!newUser.value.name || !newUser.value.email || !newUser.value.password || !newUser.value.role_id) {
+      alert('Semua field wajib diisi!');
+      return;
     }
-  },
-  methods: {
-    editUser(user) {
-      alert(`Edit ${user.name}`)
-    },
-    deleteUser(email) {
-      this.users = this.users.filter(u => u.email !== email)
-    }
+
+    await axios.post('/users', {
+      name: newUser.value.name,
+      email: newUser.value.email,
+      password: newUser.value.password,
+      role_id: newUser.value.role_id,
+    });
+
+    fetchUsers();
+    closeAddModal();
+  } catch (err) {
+    console.error('Gagal tambah user:', err);
+  }
+}
+
+async function fetchRoles() {
+  try {
+    const res = await axios.get('/roles')
+    roles.value = res.data
+    console.log('[ROLES]', res.data)
+  } catch (err) {
+    console.error('Gagal ambil role:', err)
   }
 }
 </script>
