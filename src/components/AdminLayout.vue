@@ -21,7 +21,8 @@ export default {
   },
   created() {
     const user = JSON.parse(localStorage.getItem('user'))
-    if (!user || user.role !== 'admin') {
+    console.log('ini di halaman admin layout cek user_id : ', user.role_id)
+    if (!user || user.role_id !== '1') {
       this.$router.push('/') // redirect ke login jika bukan admin
     }
   },

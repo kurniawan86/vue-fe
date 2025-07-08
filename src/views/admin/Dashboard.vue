@@ -10,6 +10,10 @@
 
 <script>
 export default {
+  name: 'Dashboard',
+  mounted() {
+    console.log('ini halaman Dashboard.vue berhasil dimuat')
+  },
   data() {
     return {
       totalUsers: 12,

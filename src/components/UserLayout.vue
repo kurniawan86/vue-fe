@@ -24,7 +24,7 @@ export default {
   name: 'UserLayout',
   created() {
     const user = JSON.parse(localStorage.getItem('user'))
-    if (!user || user.role !== 'user') {
+    if (!user || user.role !== 2) {
       this.$router.push('/')
     }
   },

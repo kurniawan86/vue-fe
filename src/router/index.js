@@ -3,8 +3,9 @@ import AdminLayout from '../components/AdminLayout.vue'
 import UserLayout from '../components/UserLayout.vue'
 import DefaultLayout from "../views/DefaultLayout.vue";
 
+
+
 const routes = [
-  // Layout default (Login & Register)
   {
     path: '/',
     component: DefaultLayout,
@@ -30,6 +31,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'AdminDashboard',
+
         component: () => import('../views/admin/Dashboard.vue')
       },
       {
@@ -52,8 +54,6 @@ const routes = [
       }
     ]
   },
-
-  // Redirect jika route tidak ditemukan
   {
     path: '/:pathMatch(.*)*',
     redirect: '/'
@@ -63,6 +63,23 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const user = JSON.parse(localStorage.getItem('user'))
+
+  // Jika belum login dan mau ke halaman admin/user, redirect ke login
+  if (!user && (to.path.startsWith('/admin') || to.path.startsWith('/user'))) {
+    return next('/')
+  }
+
+  // Jika sudah login dan mau ke login/register lagi, redirect ke dashboard sesuai role
+  if (user && (to.path === '/' || to.path === '/register')) {
+    if (user.role_id === 'admin') return next('/admin/dashboard')
+    if (user.role_id === 'user') return next('/user/profile')
+  }
+
+  next()
 })
 
 export default router

@@ -51,64 +51,111 @@
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   data() {
     return {
       email: '',
       password: '',
       errors: {},
-      // 🔒 Data user sementara
+      // Data statis: role_id 1 = admin, 2 = user
       staticUsers: [
         {
+          id: 1,
+          name: 'Admin User',
           email: 'admin@example.com',
           password: 'admin123',
-          name: 'Admin User',
-          role: 'admin',
-          permissions: ['manage_users', 'view_dashboard']
+          role_id: 'admin'
         },
         {
+          id: 2,
+          name: 'Normal User',
           email: 'user@example.com',
           password: 'user123',
-          name: 'Normal User',
-          role: 'user',
-          permissions: ['view_profile']
+          role_id: 'user'
         }
       ]
     }
   },
   methods: {
-    login() {
-      this.errors = {}
-
-      if (!this.email) {
-        this.errors.email = 'Email is required'
+    created() {
+      const user = JSON.parse(localStorage.getItem('user'))
+      if (user) {
+        if (user.role_id === 1) {
+          this.$router.push('/admin/dashboard')
+        } else if (user.role_id === 'user') {
+          this.$router.push('/user/profile')
+        }
       }
+    },
+    // login() {
+    //   this.errors = {}
+    //
+    //   // Validasi kosong
+    //   if (!this.email) this.errors.email = 'Email is required'
+    //   if (!this.password) this.errors.password = 'Password is required'
+    //   if (Object.keys(this.errors).length > 0) return
+    //
+    //   // Cari user yang cocok dari data statis
+    //   const user = this.staticUsers.find(
+    //       u => u.email === this.email && u.password === this.password
+    //   )
+    //
+    //   if (user) {
+    //     // Simpan ke localStorage
+    //     localStorage.setItem('user', JSON.stringify(user))
+    //     // console.log('Login success, user:', user)
+    //     console.log('DATA YANG AKAN DISIMPAN:', user)
+    //
+    //     // Redirect berdasarkan role_id
+    //     console.log(user.role_id)
+    //     if (user.role_id === 'admin') {
+    //       console.log('Login success, role ID:', user.role_id)
+    //       this.$router.push('/admin/dashboard')
+    //           .then(() => console.log('Redirect sukses ke /admin/dashboard'))
+    //           .catch(err => console.error('Redirect gagal:', err))
+    //       // this.$router.push('/admin/dashboard')
+    //     } else {
+    //       this.$router.push('/user/profile')
+    //     }
+    //   } else {
+    //     this.errors.general = 'Email or password is incorrect'
+    //     console.error('Login failed')
+    //   }
+    // }
+    async login() {
+      try {
+        const response = await axios.post('http://localhost:8000/api/login', {
+          email: this.email,
+          password: this.password
+        })
 
-      if (!this.password) {
-        this.errors.password = 'Password is required'
-      }
+        const user = response.data.user
 
-      if (Object.keys(this.errors).length > 0) return
+        // Simpan ke localStorage tanpa password
+        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem('token', response.data.access_token)
+        console.log('DATA USER :', user)
+        console.log('toke :', response.data.access_token)
 
-      // ✅ Cek user statis
-      const foundUser = this.staticUsers.find(
-          (user) => user.email === this.email && user.password === this.password
-      )
+        //convert role_id to string
+        const roleMap = {
+          1: 'admin',
+          2: 'user'
+        }
+        user.role_id = roleMap[user.role_id] || 'guest'
+        localStorage.setItem('user', JSON.stringify(user))
 
-      if (!foundUser) {
-        this.errors.general = 'Email or password is incorrect'
-        return
-      }
-
-      // ✅ Simpan user ke localStorage (nanti bisa diganti dengan token)
-      localStorage.setItem('user', JSON.stringify(foundUser))
-      console.log('Logged in as:', foundUser) // pastikan user.role benar
-
-      // ✅ Redirect berdasarkan role
-      if (foundUser.role === 'admin') {
-        this.$router.push('/admin/dashboard')
-      } else if (foundUser.role === 'user') {
-        this.$router.push('/user/profile')
+        // Redirect berdasarkan role_id yang string
+        if (user.role_id === 'admin') {
+          this.$router.push('/admin/dashboard')
+        } else if (user.role_id === 'user') {
+          this.$router.push('/user/profile')
+        } else {
+          this.$router.push('/')
+        }
+      } catch (error) {
+        console.error('Login gagal:', error.response?.data?.message || error.message)
       }
     }
   }
