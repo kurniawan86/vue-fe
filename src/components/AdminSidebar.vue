@@ -13,7 +13,7 @@
     <!-- Tombol Logout -->
     <div class="mt-4">
       <button
-          @click="logout"
+          @click="handleLogout"
           class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-full"
       >
         Logout
@@ -22,13 +22,25 @@
   </div>
 </template>
 
-<script>
-export default {
-  methods: {
-    logout() {
-      localStorage.removeItem('user')
-      this.$router.push('/login')
-    }
+
+<script setup>
+import api from '@/services/api'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+async function handleLogout() {
+  try {
+    await logoutUser()
+
+    // Hapus dari localStorage
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+
+    // Redirect ke halaman login
+    router.push('/login')
+  } catch (err) {
+    console.error('Logout gagal:', err)
   }
 }
 </script>

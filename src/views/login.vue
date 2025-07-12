@@ -51,94 +51,47 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '@/services/api'
+
 export default {
   data() {
     return {
       email: '',
       password: '',
       errors: {},
-      // Data statis: role_id 1 = admin, 2 = user
-      staticUsers: [
-        {
-          id: 1,
-          name: 'Admin User',
-          email: 'admin@example.com',
-          password: 'admin123',
-          role_id: 'admin'
-        },
-        {
-          id: 2,
-          name: 'Normal User',
-          email: 'user@example.com',
-          password: 'user123',
-          role_id: 'user'
-        }
-      ]
+    }
+  },
+  created() {
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (user) {
+      if (user.role_id === 'admin') {
+        this.$router.push('/admin/dashboard')
+      } else if (user.role_id === 'user') {
+        this.$router.push('/user/profile')
+      }
     }
   },
   methods: {
-    created() {
-      const user = JSON.parse(localStorage.getItem('user'))
-      if (user) {
-        if (user.role_id === 1) {
-          this.$router.push('/admin/dashboard')
-        } else if (user.role_id === 'user') {
-          this.$router.push('/user/profile')
-        }
-      }
-    },
-    // login() {
-    //   this.errors = {}
-    //
-    //   // Validasi kosong
-    //   if (!this.email) this.errors.email = 'Email is required'
-    //   if (!this.password) this.errors.password = 'Password is required'
-    //   if (Object.keys(this.errors).length > 0) return
-    //
-    //   // Cari user yang cocok dari data statis
-    //   const user = this.staticUsers.find(
-    //       u => u.email === this.email && u.password === this.password
-    //   )
-    //
-    //   if (user) {
-    //     // Simpan ke localStorage
-    //     localStorage.setItem('user', JSON.stringify(user))
-    //     // console.log('Login success, user:', user)
-    //     console.log('DATA YANG AKAN DISIMPAN:', user)
-    //
-    //     // Redirect berdasarkan role_id
-    //     console.log(user.role_id)
-    //     if (user.role_id === 'admin') {
-    //       console.log('Login success, role ID:', user.role_id)
-    //       this.$router.push('/admin/dashboard')
-    //           .then(() => console.log('Redirect sukses ke /admin/dashboard'))
-    //           .catch(err => console.error('Redirect gagal:', err))
-    //       // this.$router.push('/admin/dashboard')
-    //     } else {
-    //       this.$router.push('/user/profile')
-    //     }
-    //   } else {
-    //     this.errors.general = 'Email or password is incorrect'
-    //     console.error('Login failed')
-    //   }
-    // }
     async login() {
       try {
-        const response = await axios.post('http://localhost:8000/api/login', {
+        const credentials = {
           email: this.email,
           password: this.password
-        })
+        }
 
-        const user = response.data.user
+        const response = await api.login(credentials)     // axios response
+        const data = response.data                        // ambil data dari response
+        const user = data.user                            // baru ambil user dari data
 
-        // Simpan ke localStorage tanpa password
-        localStorage.setItem('user', JSON.stringify(user))
-        localStorage.setItem('token', response.data.access_token)
-        console.log('DATA USER :', user)
-        console.log('toke :', response.data.access_token)
+        if (!user) {
+          this.errors.general = 'Data user tidak ditemukan di response login'
+          return
+        }
 
-        //convert role_id to string
+        // Simpan token dan user ke localStorage
+        localStorage.setItem('token', data.access_token)
+
+        // mapping role_id angka ke string
         const roleMap = {
           1: 'admin',
           2: 'user'
@@ -146,7 +99,10 @@ export default {
         user.role_id = roleMap[user.role_id] || 'guest'
         localStorage.setItem('user', JSON.stringify(user))
 
-        // Redirect berdasarkan role_id yang string
+        console.log('DATA USER:', user)
+        console.log('Token:', data.access_token)
+
+        // Redirect
         if (user.role_id === 'admin') {
           this.$router.push('/admin/dashboard')
         } else if (user.role_id === 'user') {
@@ -154,8 +110,10 @@ export default {
         } else {
           this.$router.push('/')
         }
+
       } catch (error) {
         console.error('Login gagal:', error.response?.data?.message || error.message)
+        this.errors.general = 'Login gagal. Silakan coba lagi.'
       }
     }
   }

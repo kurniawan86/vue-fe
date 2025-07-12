@@ -78,7 +78,6 @@ router.beforeEach((to, from, next) => {
     if (user.role_id === 'admin') return next('/admin/dashboard')
     if (user.role_id === 'user') return next('/user/profile')
   }
-
   next()
 })
 

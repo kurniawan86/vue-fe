@@ -110,7 +110,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import axios from '@/axios'
+import api from '@/services/api'
 
 const users = ref([])
 const search = ref('')
@@ -119,16 +119,16 @@ const showEditModal = ref(false)
 const showDeleteModal = ref(false)
 const userIdToDelete = ref(null)
 
-onMounted(fetchUsers)
-
 async function fetchUsers() {
   try {
-    const res = await axios.get('/users')
+    const res = await api.getUsers()
     users.value = res.data
   } catch (err) {
     console.error('Gagal ambil user:', err)
   }
 }
+
+onMounted(fetchUsers)
 
 const filteredUsers = computed(() =>
     users.value.filter(user =>
@@ -150,7 +150,7 @@ function closeEditModal() {
 
 async function updateUser() {
   try {
-    await axios.put(`/users/${selectedUser.value.id}`, {
+    await api.updateUser(selectedUser.value.id, {
       name: selectedUser.value.name,
       email: selectedUser.value.email
     })
@@ -173,7 +173,7 @@ function closeDeleteModal() {
 
 async function confirmDeleteUser() {
   try {
-    await axios.delete(`/users/${userIdToDelete.value}`)
+    await api.deleteUser(userIdToDelete.value)
     fetchUsers()
     closeDeleteModal()
   } catch (err) {
@@ -201,29 +201,32 @@ function closeAddModal() {
 
 async function createUser() {
   try {
-    // validasi sederhana
+    // Validasi sederhana
     if (!newUser.value.name || !newUser.value.email || !newUser.value.password || !newUser.value.role_id) {
       alert('Semua field wajib diisi!');
       return;
     }
 
-    await axios.post('/users', {
+    const payload = {
       name: newUser.value.name,
       email: newUser.value.email,
       password: newUser.value.password,
       role_id: newUser.value.role_id,
-    });
+    }
 
-    fetchUsers();
-    closeAddModal();
+    await api.createUser(payload)
+
+    await fetchUsers()
+    closeAddModal()
   } catch (err) {
-    console.error('Gagal tambah user:', err);
+    console.error('Gagal tambah user:', err)
+    alert('Gagal tambah user. Silakan cek console.')
   }
 }
 
 async function fetchRoles() {
   try {
-    const res = await axios.get('/roles')
+    const res = await api.getRoles()
     roles.value = res.data
     console.log('[ROLES]', res.data)
   } catch (err) {
